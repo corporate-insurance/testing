@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dealer visit tracker</title>
+<style>
+:root{--bg:#f3f4f6;--card:#fff;--ink:#1d2229;--mute:#5d6673;--line:#dde1e6;--acc:#1f6f5c;--accink:#fff;--warn:#b4441a;--liveBg:#dff2ec}
+@media(prefers-color-scheme:dark){:root{--bg:#15181d;--card:#1e2229;--ink:#eceef1;--mute:#9aa3af;--line:#303743;--acc:#4fb79d;--accink:#0c1a16;--warn:#f08a5d;--liveBg:#1c3a33}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px 14px 40px}h1{font-size:24px;margin:4px 0 2px}h2{font-size:18px;margin:0 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+label{display:block;font-size:14px;color:var(--mute);margin:10px 0 4px}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
+textarea{min-height:70px}button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:13px;background:var(--acc);color:var(--accink);width:100%;margin-top:14px}
+button.s{width:auto;margin:0;padding:10px 14px}button:disabled{opacity:.5}
+.mute{color:var(--mute);font-size:14px}.err{color:var(--warn)}.row{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.item{padding:9px 0;border-top:1px solid var(--line)}.item:first-child{border-top:0}
+.pill{font-size:13px;font-weight:600;padding:2px 9px;border-radius:20px;background:var(--bg);color:var(--mute)}.pill.live{background:var(--liveBg);color:var(--acc)}.pill.warn{color:var(--warn);border:1px solid var(--warn)}
+a{color:var(--acc)}[hidden]{display:none!important}
+</style></head><body><main>
+
+<!-- ============ AGENT PAGE (default) ============ -->
+<div id="agentView" hidden>
+  <h1>Dealer visits</h1><div class="mute" id="adate"></div>
+  <div class="card"><label for="me">I’m</label><select id="me"></select><div id="box"></div><div class="mute" id="amsg" style="margin-top:10px"></div></div>
+  <div class="card"><h2>My visits today</h2><div id="alist"></div></div>
+</div>
+
+<!-- ============ MANAGER PAGE (add #manager to the link) ============ -->
+<div id="mgrView" hidden>
+  <div id="gate" class="card"><h2>Manager PIN</h2><div class="row"><input id="pin" type="password" inputmode="numeric" placeholder="PIN"><button class="s" id="open">Open</button></div><div class="err" id="gerr"></div></div>
+  <div id="app" hidden>
+    <div class="row"><h1>Manager</h1><input type="date" id="day" style="width:auto"></div><div class="mute" id="mmsg"></div>
+    <div class="card"><h2>Team</h2><div id="team"></div></div>
+    <div class="card"><h2>Follow-ups</h2><div id="follow"></div></div>
+    <div class="card"><h2>Visits</h2><div id="log"></div></div>
+    <div class="card"><h2>Agent link</h2><p class="mute" style="margin-top:0">Send this link to your agents:</p><input id="alink" readonly><div class="row" style="margin-top:10px"><button class="s" id="cp">Copy link</button><button class="s" id="wa">Send on WhatsApp</button></div></div>
+  </div>
+</div>
+
+<script>
+/* ======== EDIT THESE 3 THINGS ======== */
+const CONFIG = {
+  FIREBASE_URL: "https://YOUR-PROJECT-default-rtdb.firebaseio.com",
+  AGENTS: ["Agent 1", "Agent 2", "Agent 3", "Agent 4"],
+  MANAGER_PIN: "1234"
+};
+/* ===================================== */
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,"0");
+const dayKey = d => { d=new Date(d); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); };
+const hm = t => new Date(t).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+const dur = ms => { const m=Math.max(0,Math.round(ms/60000)); return m<60?m+" min":Math.floor(m/60)+" h "+(m%60)+" min"; };
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const notSet = () => CONFIG.FIREBASE_URL.includes("YOUR-PROJECT");
+const api = (path, method, body) => fetch(CONFIG.FIREBASE_URL.replace(/\/$/,"")+path+".json", {method:method||"GET", headers:body?{"Content-Type":"application/json"}:undefined, body:body?JSON.stringify(body):undefined}).then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); });
+const getPos = () => new Promise(res => { if(!navigator.geolocation) return res(null);
+  navigator.geolocation.getCurrentPosition(p=>res({lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),acc:Math.round(p.coords.accuracy)}), ()=>res(null), {enableHighAccuracy:true,timeout:12000,maximumAge:0}); });
+
+let timer = null;
+function route(){
+  clearInterval(timer);
+  const mgr = location.hash === "#manager";
+  $("agentView").hidden = mgr; $("mgrView").hidden = !mgr;
+  if(mgr) startManager(); else startAgent();
+}
+window.addEventListener("hashchange", route);
+
+/* ---------- AGENT ---------- */
+let me = localStorage.getItem("dv_me") || "", visits = {}, agentInit = false;
+const setMsg = (t, bad) => { $("amsg").className = bad ? "err" : "mute"; $("amsg").textContent = t; };
+function startAgent(){
+  if(!agentInit){
+    agentInit = true;
+    $("adate").textContent = new Date().toLocaleDateString([], {weekday:"long",day:"numeric",month:"long",year:"numeric"});
+    $("me").innerHTML = '<option value="">Choose your name</option>' + CONFIG.AGENTS.map(a=>'<option>'+esc(a)+'</option>').join("");
+    $("me").value = me;
+    $("me").onchange = e => { me = e.target.value; localStorage.setItem("dv_me", me); $("box").dataset.k=""; aRender(); };
+  }
+  aLoad(); timer = setInterval(aLoad, 20000);
+}
+async function aLoad(){
+  if(notSet()){ setMsg("Setup needed: add the Firebase URL in the CONFIG at the top of this file.", true); aRender(); return; }
+  try { visits = (await api("/visits/"+dayKey(Date.now()))) || {}; setMsg(""); } catch(e){ setMsg("Can’t reach the server. Check internet.", true); }
+  aRender();
+}
+function mine(){ return Object.entries(visits).map(([id,v])=>Object.assign({id},v)).filter(v=>v.agent===me).sort((a,b)=>b.inAt-a.inAt); }
+function aRender(){
+  const box = $("box"), list = mine(), open = list.find(v=>!v.outAt);
+  const key = !me ? "none" : open ? "out:"+open.id : "in";
+  if(box.dataset.k !== key){
+    box.dataset.k = key;
+    if(!me) box.innerHTML = '<p class="mute">Choose your name to start.</p>';
+    else if(!open) box.innerHTML = '<label for="dealer">Dealer name</label><input id="dealer" autocomplete="off"><button id="go">Check in</button><div class="mute" style="margin-top:8px">Time and GPS location are saved automatically.</div>';
+    else box.innerHTML = '<div class="row"><strong>'+esc(open.dealer)+'</strong><span class="mute">In since '+hm(open.inAt)+'</span></div>'+
+      '<label for="purpose">Purpose of visit</label><select id="purpose"><option>New dealer onboarding</option><option>Follow-up meeting</option><option>Stock or inventory check</option><option>Payment or documents</option><option>Other</option></select>'+
+      '<label for="outcome">Outcome and notes</label><textarea id="outcome"></textarea><label for="fu">Follow-up date (optional)</label><input id="fu" type="date"><button id="go">Check out</button>';
+    if($("go")) $("go").onclick = open ? () => checkOut(open) : checkIn;
+  }
+  $("alist").innerHTML = list.length ? list.map(v=>'<div class="item"><strong>'+esc(v.dealer)+'</strong><div class="mute">'+hm(v.inAt)+(v.outAt?' to '+hm(v.outAt):' · still there')+(v.purpose?' · '+esc(v.purpose):'')+'</div>'+(v.outcome?'<div>'+esc(v.outcome)+'</div>':'')+'</div>').join("") : '<div class="mute">No visits yet today.</div>';
+}
+async function checkIn(){
+  const dealer = $("dealer").value.trim(); if(!dealer) return setMsg("Enter the dealer name first.", true);
+  $("go").disabled = true; setMsg("Getting your location…");
+  const pos = await getPos(), now = Date.now();
+  try { await api("/visits/"+dayKey(now), "POST", {agent:me, dealer, inAt:now, outAt:null, lat:pos?pos.lat:null, lng:pos?pos.lng:null, acc:pos?pos.acc:null}); setMsg(pos?"Checked in.":"Checked in, but GPS was not available."); }
+  catch(e){ setMsg("Could not save. Try again.", true); $("go").disabled=false; return; }
+  aLoad();
+}
+async function checkOut(v){
+  $("go").disabled = true; setMsg("Getting your location…");
+  const pos = await getPos(), now = Date.now(), fu = $("fu").value || null;
+  const patch = {outAt:now, outLat:pos?pos.lat:null, outLng:pos?pos.lng:null, purpose:$("purpose").value, outcome:$("outcome").value.trim(), followUp:fu};
+  try {
+    await api("/visits/"+dayKey(v.inAt)+"/"+v.id, "PATCH", patch);
+    if(fu) await api("/followups", "POST", {agent:me, dealer:v.dealer, date:fu, note:patch.outcome});
+    setMsg("Checked out.");
+  } catch(e){ setMsg("Could not save. Try again.", true); $("go").disabled=false; return; }
+  aLoad();
+}
+
+/* ---------- MANAGER ---------- */
+let mgrInit = false;
+function startManager(){
+  if(sessionStorage.getItem("dv_ok")) showApp(); else { $("gate").hidden = false; $("app").hidden = true; }
+  if(!mgrInit){
+    mgrInit = true;
+    $("open").onclick = () => { if($("pin").value === CONFIG.MANAGER_PIN){ sessionStorage.setItem("dv_ok","1"); showApp(); } else $("gerr").textContent = "Wrong PIN."; };
+    $("pin").onkeydown = e => { if(e.key==="Enter") $("open").click(); };
+    $("day").onchange = mLoad;
+    $("cp").onclick = async () => { try { await navigator.clipboard.writeText($("alink").value); $("mmsg").textContent="Link copied."; } catch(e){ $("alink").select(); } };
+    $("wa").onclick = () => window.open("https://wa.me/?text="+encodeURIComponent("Please use this link to check in and out at dealers: "+$("alink").value), "_blank");
+  }
+}
+function showApp(){
+  $("gate").hidden = true; $("app").hidden = false;
+  $("alink").value = location.href.split("#")[0];
+  if(!$("day").value) $("day").value = dayKey(Date.now());
+  mLoad(); timer = setInterval(mLoad, 15000);
+}
+async function mLoad(){
+  if(notSet()){ $("mmsg").innerHTML = '<span class="err">Setup needed: add the Firebase URL in the CONFIG at the top of this file.</span>'; return; }
+  const day = $("day").value || dayKey(Date.now());
+  try {
+    const [vs, fs] = await Promise.all([api("/visits/"+day), api("/followups")]);
+    const list = Object.entries(vs||{}).map(([id,v])=>Object.assign({id},v)).sort((a,b)=>b.inAt-a.inAt);
+    $("mmsg").textContent = "Updated "+hm(Date.now());
+    $("team").innerHTML = CONFIG.AGENTS.map(a=>{
+      const m = list.filter(v=>v.agent===a), open = m.find(v=>!v.outAt);
+      const st = open ? '<span class="pill live">At '+esc(open.dealer)+' since '+hm(open.inAt)+'</span>' : m.length ? '<span class="pill">Last out '+hm(Math.max.apply(null,m.map(v=>v.outAt||0)))+'</span>' : '<span class="pill">No visits</span>';
+      return '<div class="item row"><div><strong>'+esc(a)+'</strong><div class="mute">'+m.length+' visit'+(m.length===1?"":"s")+'</div></div>'+st+'</div>'; }).join("");
+    $("log").innerHTML = list.length ? list.map(v=>'<div class="item"><div class="row"><strong>'+esc(v.dealer)+'</strong><span class="mute">'+esc(v.agent)+'</span></div><div class="mute">'+hm(v.inAt)+(v.outAt?' to '+hm(v.outAt)+' ('+dur(v.outAt-v.inAt)+')':' · still there')+' · '+(v.lat!=null?'<a target="_blank" rel="noopener" href="https://www.google.com/maps?q='+v.lat+','+v.lng+'">Map</a> (±'+v.acc+' m)':'No GPS')+'</div>'+(v.purpose?'<div>'+esc(v.purpose)+(v.outcome?': '+esc(v.outcome):'')+'</div>':'')+'</div>').join("") : '<div class="mute">No visits on this day.</div>';
+    const today = dayKey(Date.now()), f = Object.values(fs||{}).filter(x=>x.date>=dayKey(Date.now()-14*864e5)).sort((a,b)=>a.date<b.date?-1:1);
+    $("follow").innerHTML = f.length ? f.map(x=>'<div class="item row"><div><strong>'+esc(x.dealer)+'</strong><div class="mute">'+esc(x.agent)+(x.note?' · '+esc(x.note):'')+'</div></div><span class="pill '+(x.date<today?'warn':'')+'">'+(x.date<today?'Overdue ':'')+esc(x.date)+'</span></div>').join("") : '<div class="mute">No follow-ups.</div>';
+  } catch(e){ $("mmsg").innerHTML = '<span class="err">Can’t load data. Check the Firebase URL and rules.</span>'; }
+}
+
+route();
+</script></main></body></html>
