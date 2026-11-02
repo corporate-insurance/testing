@@ -1,159 +1,188 @@
 <!DOCTYPE html>
-<html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dealer visit tracker</title>
-<style>
-:root{--bg:#f3f4f6;--card:#fff;--ink:#1d2229;--mute:#5d6673;--line:#dde1e6;--acc:#1f6f5c;--accink:#fff;--warn:#b4441a;--liveBg:#dff2ec}
-@media(prefers-color-scheme:dark){:root{--bg:#15181d;--card:#1e2229;--ink:#eceef1;--mute:#9aa3af;--line:#303743;--acc:#4fb79d;--accink:#0c1a16;--warn:#f08a5d;--liveBg:#1c3a33}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-main{max-width:640px;margin:0 auto;padding:16px 14px 40px}h1{font-size:24px;margin:4px 0 2px}h2{font-size:18px;margin:0 0 8px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
-label{display:block;font-size:14px;color:var(--mute);margin:10px 0 4px}
-input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
-textarea{min-height:70px}button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:13px;background:var(--acc);color:var(--accink);width:100%;margin-top:14px}
-button.s{width:auto;margin:0;padding:10px 14px}button:disabled{opacity:.5}
-.mute{color:var(--mute);font-size:14px}.err{color:var(--warn)}.row{display:flex;justify-content:space-between;gap:10px;align-items:center}
-.item{padding:9px 0;border-top:1px solid var(--line)}.item:first-child{border-top:0}
-.pill{font-size:13px;font-weight:600;padding:2px 9px;border-radius:20px;background:var(--bg);color:var(--mute)}.pill.live{background:var(--liveBg);color:var(--acc)}.pill.warn{color:var(--warn);border:1px solid var(--warn)}
-a{color:var(--acc)}[hidden]{display:none!important}
-</style></head><body><main>
-
-<!-- ============ AGENT PAGE (default) ============ -->
-<div id="agentView" hidden>
-  <h1>Dealer visits</h1><div class="mute" id="adate"></div>
-  <div class="card"><label for="me">I’m</label><select id="me"></select><div id="box"></div><div class="mute" id="amsg" style="margin-top:10px"></div></div>
-  <div class="card"><h2>My visits today</h2><div id="alist"></div></div>
-</div>
-
-<!-- ============ MANAGER PAGE (add #manager to the link) ============ -->
-<div id="mgrView" hidden>
-  <div id="gate" class="card"><h2>Manager PIN</h2><div class="row"><input id="pin" type="password" inputmode="numeric" placeholder="PIN"><button class="s" id="open">Open</button></div><div class="err" id="gerr"></div></div>
-  <div id="app" hidden>
-    <div class="row"><h1>Manager</h1><input type="date" id="day" style="width:auto"></div><div class="mute" id="mmsg"></div>
-    <div class="card"><h2>Team</h2><div id="team"></div></div>
-    <div class="card"><h2>Follow-ups</h2><div id="follow"></div></div>
-    <div class="card"><h2>Visits</h2><div id="log"></div></div>
-    <div class="card"><h2>Agent link</h2><p class="mute" style="margin-top:0">Send this link to your agents:</p><input id="alink" readonly><div class="row" style="margin-top:10px"><button class="s" id="cp">Copy link</button><button class="s" id="wa">Send on WhatsApp</button></div></div>
-  </div>
-</div>
-
+<style id="css-dash" media="not all">
+:root{--bg:#f2f5f7;--s:#fff;--ink:#14233b;--mute:#5d6b7e;--line:#dce3ea;--ac:#0e7c86;--bad:#b3372f;--good:#1f7a4d;--warn:#b57400;--track:#e4eaf0}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1824;--s:#17222f;--ink:#e8eef5;--mute:#9aa9bb;--line:#2a3849;--ac:#3cb6c0;--bad:#ef7f76;--good:#58c28b;--warn:#e0a53a;--track:#26344a}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:14px 12px 48px}h1{font-size:22px;margin:4px 0 10px}h2{font-size:16px;margin:0 0 8px}
+nav,.seg{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto}
+nav button,.seg button{flex:1;min-width:max-content;padding:9px 12px;border:1px solid var(--line);background:var(--s);color:var(--ink);border-radius:9px;font:inherit;font-weight:600;cursor:pointer}
+[aria-pressed=true],[aria-selected=true]{background:var(--ac)!important;color:#fff!important;border-color:var(--ac)!important}
+.card{background:var(--s);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.tot{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}.tot div{background:var(--s);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.tot b{display:block;font-size:19px}.tot span{font-size:12px;color:var(--mute)}
+.wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:8px 6px;text-align:right;border-top:1px solid var(--line);white-space:nowrap}th{color:var(--mute);font-weight:600;border-top:0}th:first-child,td:first-child{text-align:left}
+.bar{height:8px;background:var(--track);border-radius:9px;overflow:hidden;min-width:70px}.bar i{display:block;height:100%;background:var(--ac)}
+.fn{display:grid;grid-template-columns:110px 1fr 40px;gap:8px;align-items:center;margin:6px 0;font-size:14px}
+.it{padding:9px 0;border-top:1px solid var(--line)}.it:first-child{border-top:0}.it small{display:block;color:var(--mute)}
+.bad{color:var(--bad);font-weight:700}.empty{color:var(--mute);padding:10px 0}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font:inherit;margin-bottom:8px}
+button.b{padding:9px 14px;border:0;border-radius:9px;background:var(--ac);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+button.g{background:transparent;color:var(--ink);border:1px solid var(--line);padding:6px 10px;font-size:13px;border-radius:8px;cursor:pointer}
+code{display:block;word-break:break-all;font-size:12px;color:var(--mute);margin:3px 0 6px}#m{font-weight:600;min-height:22px}
+</style>
+<style id="css-agent" media="not all">
+body{margin:0;background:#f2f5f7;color:#14233b;font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:520px;margin:0 auto;padding:16px 14px 40px}
+h1{font-size:21px;margin:4px 0 2px}.sub{color:#5d6b7e;font-size:13px;margin:0 0 12px}
+.card{background:#fff;border:1px solid #dce3ea;border-radius:12px;padding:14px}
+.note{background:#fff7e0;border:1px solid #ecd48a;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
+input,select,textarea{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #dce3ea;border-radius:9px;background:#f2f5f7;font:inherit;color:inherit}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{width:100%;margin-top:14px;padding:13px;border:0;border-radius:10px;background:#0e7c86;color:#fff;font:inherit;font-weight:700}
+button:disabled{opacity:.6}#msg{margin-top:10px;font-weight:600}.ok{color:#1f7a4d}.err{color:#b3372f}
+</style>
+</head><body>
+<main id="dashApp" hidden>
+<h1>Dealer dashboard</h1>
+<nav id="nav"></nav><div id="v"><p class="empty">Loading…</p></div><div id="m" role="status"></div>
+</main>
+<main id="agentApp" hidden>
+<h1>Dealer visit log</h1>
+<div class="card" id="bad" hidden>This link is not valid. Ask your manager for your personal link.</div>
+<div class="card" id="mgr" style="margin-top:12px" hidden><b>Manager?</b>
+<label for="mk">Manager key (Settings tab, cell B1)</label><input id="mk" type="password" autocomplete="off">
+<button id="mg">Open manager page</button></div>
+<div id="good" hidden>
+<p class="sub">Logged in as <b id="who"></b></p>
+<div class="note" id="note" hidden><b>Message from your manager:</b><br><span id="nt"></span></div>
+<div class="card">
+<div class="row"><div><label for="date">Date</label><input type="date" id="date"></div>
+<div><label for="product">Loan type</label><select id="product"><option>New car loan</option><option>Used car loan</option><option>Refinance</option></select></div></div>
+<div class="row"><div><label for="dealer">Dealer name</label><input id="dealer" autocomplete="off"></div>
+<div><label for="contact">Contact person / phone</label><input id="contact" autocomplete="off"></div></div>
+<div class="row"><div><label for="stage">Outcome</label><select id="stage"><option>Visited</option><option>Lead</option><option>Application</option><option>Disbursed</option><option>Lost</option></select></div>
+<div><label for="amount">Loan amount (₹)</label><input id="amount" type="number" inputmode="numeric" min="0"></div></div>
+<label for="lost">Reason if lost (rate, documents, competitor…)</label><input id="lost">
+<div class="row"><div><label for="rating">Dealer interest</label><select id="rating"><option value="">Not rated</option><option value="5">5 – Very keen</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1 – Not interested</option></select></div>
+<div><label for="follow">Follow-up date</label><input type="date" id="follow"></div></div>
+<label for="feedback">What did the dealer say?</label><textarea id="feedback" rows="2"></textarea>
+<label for="notes">Your notes</label><textarea id="notes" rows="2"></textarea>
+<div id="locwrap" hidden><label for="locbox">Location (paste a Google Maps or WhatsApp location link)</label><input id="locbox" placeholder="https://maps.app.goo.gl/…"></div>
+<button id="go">Save visit</button><div id="msg" role="status"></div>
+</div></div></main>
 <script>
-/* ======== EDIT THESE 3 THINGS ======== */
-const CONFIG = {
-  FIREBASE_URL: "https://YOUR-PROJECT-default-rtdb.firebaseio.com",
-  AGENTS: ["Agent 1", "Agent 2", "Agent 3", "Agent 4"],
-  MANAGER_PIN: "1234"
-};
-/* ===================================== */
+const API = "https://script.google.com/macros/s/AKfycbwr0R5FNcW2_FxyicUkDlKC5SW0S1PxAzG_kNHcW63PPKANJa610ASe4DLPC0lHnWzbpQ/exec";
+const P = new URLSearchParams(location.search);
+async function api(body) {
+  const r = await fetch(API, {method: "POST", body: JSON.stringify(body)});
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || "Request failed");
+  return j;
+}
+function runDash() {
 
+const K = P.get("k") || "";
 const $ = id => document.getElementById(id);
-const pad = n => String(n).padStart(2,"0");
-const dayKey = d => { d=new Date(d); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); };
-const hm = t => new Date(t).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
-const dur = ms => { const m=Math.max(0,Math.round(ms/60000)); return m<60?m+" min":Math.floor(m/60)+" h "+(m%60)+" min"; };
-const esc = s => String(s==null?"":s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const notSet = () => CONFIG.FIREBASE_URL.includes("YOUR-PROJECT");
-const api = (path, method, body) => fetch(CONFIG.FIREBASE_URL.replace(/\/$/,"")+path+".json", {method:method||"GET", headers:body?{"Content-Type":"application/json"}:undefined, body:body?JSON.stringify(body):undefined}).then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); });
-const getPos = () => new Promise(res => { if(!navigator.geolocation) return res(null);
-  navigator.geolocation.getCurrentPosition(p=>res({lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),acc:Math.round(p.coords.accuracy)}), ()=>res(null), {enableHighAccuracy:true,timeout:12000,maximumAge:0}); });
-
-let timer = null;
-function route(){
-  clearInterval(timer);
-  const mgr = location.hash === "#manager";
-  $("agentView").hidden = mgr; $("mgrView").hidden = !mgr;
-  if(mgr) startManager(); else startAgent();
+const esc = t => String(t == null ? "" : t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const inr = n => "₹" + new Intl.NumberFormat("en-IN").format(Math.round(n || 0));
+const iso = d => { const z = new Date(d.getTime() - d.getTimezoneOffset() * 6e4); return z.toISOString().slice(0, 10); };
+const TABS = [["d","Dashboard"],["f","Feedback"],["u","Follow-ups"],["a","Agents & links"]];
+const PRODS = ["New car loan","Used car loan","Refinance"];
+let D = null, tab = "d", range = "today";
+const say = (t, c) => { $("m").textContent = t; $("m").style.color = c === "e" ? "var(--bad)" : "var(--good)"; };
+const copy = async (t) => { try { await navigator.clipboard.writeText(t); say("Copied"); } catch (e) { prompt("Copy this link", t); } };
+function from() { const d = new Date(); if (range === "week") d.setDate(d.getDate() - (d.getDay() + 6) % 7); if (range === "month") d.setDate(1); return iso(d); }
+function days() { let n = 0; const d = new Date(from() + "T00:00"), e = new Date(); while (d <= e) { if (d.getDay() !== 0) n++; d.setDate(d.getDate() + 1); } return Math.max(n, 1); }
+function st(l) { const o = {v: l.length, l: 0, a: 0, d: 0, amt: 0, r: 0, rn: 0}; l.forEach(e => { const i = ["Visited","Lead","Application","Disbursed"].indexOf(e.stage); if (i >= 1) o.l++; if (i >= 2) o.a++; if (i === 3) { o.d++; o.amt += Number(e.amount) || 0; } if (e.rating) { o.r += Number(e.rating); o.rn++; } }); return o; }
+function draw() {
+  $("nav").innerHTML = TABS.map(([k, l]) => `<button aria-selected="${tab === k}" data-t="${k}">${l}</button>`).join("");
+  document.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { tab = b.dataset.t; draw(); });
+  if (!D) return;
+  ({d: vDash, f: vFeed, u: vFollow, a: vAgents})[tab]();
 }
-window.addEventListener("hashchange", route);
+function vDash() {
+  const f = from(), l = D.visits.filter(e => e.date >= f), t = st(l), goal = D.target * days();
+  const rows = D.agents.map(a => { const s = st(l.filter(e => e.agent === a.name)); const p = Math.min(100, Math.round(s.v / goal * 100));
+    return `<tr><td><b>${esc(a.name)}</b></td><td>${s.v}</td><td>${s.l}</td><td>${s.a}</td><td>${s.d}</td><td>${inr(s.amt)}</td><td>${s.rn ? (s.r / s.rn).toFixed(1) : "–"}</td><td><div class="bar"><i style="width:${p}%"></i></div>${p}%</td></tr>`; }).join("");
+  const prod = PRODS.map(p => { const s = st(l.filter(e => e.product === p)); return `<tr><td>${p}</td><td>${s.v}</td><td>${s.a}</td><td>${s.d}</td><td>${inr(s.amt)}</td></tr>`; }).join("");
+  const mx = Math.max(t.v, 1), fn = [["Visits", t.v], ["Leads", t.l], ["Applications", t.a], ["Disbursed", t.d]].map(([n, v]) => `<div class="fn"><span>${n}</span><div class="bar"><i style="width:${v / mx * 100}%"></i></div><b>${v}</b></div>`).join("");
+  const lost = l.filter(e => e.stage === "Lost" && e.lost).slice(-5).reverse().map(e => `<div class="it"><b>${esc(e.dealer)}</b> <small>${esc(e.agent)} · ${esc(e.lost)}</small></div>`).join("");
+  $("v").innerHTML = `<div class="seg">${[["today","Today"],["week","This week"],["month","This month"]].map(([k, n]) => `<button aria-pressed="${range === k}" data-r="${k}">${n}</button>`).join("")}</div>
+  <div class="tot"><div><b>${t.v}</b><span>Visits</span></div><div><b>${t.a}</b><span>Applications</span></div><div><b>${t.d}</b><span>Disbursed</span></div><div><b>${inr(t.amt)}</b><span>Amount</span></div></div>
+  <div class="card"><h2>Team</h2><div class="wrap"><table><tr><th>Agent</th><th>Visits</th><th>Leads</th><th>Apps</th><th>Disb.</th><th>Amount</th><th>Interest</th><th>Target</th></tr>${rows}</table></div></div>
+  <div class="card"><h2>Funnel</h2>${fn}</div>
+  <div class="card"><h2>By loan type</h2><div class="wrap"><table><tr><th>Type</th><th>Visits</th><th>Apps</th><th>Disb.</th><th>Amount</th></tr>${prod}</table></div></div>
+  <div class="card"><h2>Recent lost deals</h2>${lost || '<div class="empty">None in this period.</div>'}</div>`;
+  document.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { range = b.dataset.r; draw(); });
+}
+function vFeed() {
+  const l = D.visits.filter(e => e.feedback || e.rating).slice(-30).reverse();
+  $("v").innerHTML = `<div class="card"><h2>Send a message to an agent</h2><select id="na"><option>Everyone</option>${D.agents.map(a => `<option>${esc(a.name)}</option>`).join("")}</select><textarea id="nm" rows="2" placeholder="Shown at the top of their visit form"></textarea><button class="b" id="ns">Send message</button></div>
+  <div class="card"><h2>What dealers are saying</h2>${l.length ? l.map(e => `<div class="it"><b>${esc(e.dealer)}</b> ${e.rating ? "· interest " + e.rating + "/5" : ""}<small>${esc(e.agent)} · ${esc(e.date)} · ${esc(e.product)}${e.loc ? ` · <a href="${esc(e.loc)}" target="_blank" rel="noopener">Map</a>` : ""}</small>${e.feedback ? `<div>${esc(e.feedback)}</div>` : ""}</div>`).join("") : '<div class="empty">No dealer feedback yet.</div>'}</div>`;
+  $("ns").onclick = () => api({action: "note", k: K, agent: $("na").value, msg: $("nm").value.trim()}).then(() => { say("Message sent"); $("nm").value = ""; }).catch(e => say(e.message, "e"));
+}
+function vFollow() {
+  const t = iso(new Date()), l = D.visits.filter(e => e.follow).sort((a, b) => a.follow.localeCompare(b.follow)).filter(e => e.follow >= iso(new Date(Date.now() - 30 * 864e5)));
+  $("v").innerHTML = `<div class="card"><h2>Follow-ups (last 30 days and upcoming)</h2>${l.length ? l.map(e => `<div class="it"><b>${esc(e.dealer)}</b> <span class="${e.follow < t ? "bad" : ""}">${e.follow < t ? "Overdue " : "Due "}${esc(e.follow)}</span><small>${esc(e.agent)} · ${esc(e.contact)} · ${esc(e.product)}${e.loc ? ` · <a href="${esc(e.loc)}" target="_blank" rel="noopener">Map</a>` : ""}</small>${e.notes ? `<div>${esc(e.notes)}</div>` : ""}</div>`).join("") : '<div class="empty">No follow-ups set.</div>'}</div>`;
+}
+function vAgents() {
+  $("v").innerHTML = `<div class="card"><h2>Agent links</h2>${D.agents.map(a => `<div class="it"><b>${esc(a.name)}</b><code>${esc(D.base + "?a=" + a.code)}</code><button class="g" data-c="${esc(a.code)}">Copy link</button> <button class="g" data-w="${esc(a.code)}">WhatsApp</button></div>`).join("")}</div>
+  <div class="card"><h2>Add an agent</h2><input id="an" placeholder="Agent name"><button class="b" id="ab">Create link</button><p class="empty">To rename an agent or stop a link, edit or delete the row in the Agents tab of your Sheet.</p></div>`;
+  const by = c => D.agents.find(a => a.code === c), L = a => D.base + "?a=" + a.code;
+  document.querySelectorAll("[data-c]").forEach(b => b.onclick = () => copy(L(by(b.dataset.c))));
+  document.querySelectorAll("[data-w]").forEach(b => b.onclick = () => { const a = by(b.dataset.w); window.open("https://wa.me/?text=" + encodeURIComponent("Hi " + a.name + ", your personal visit-log link (please don’t share it): " + L(a)), "_blank"); });
+  $("ab").onclick = () => api({action: "addAgent", k: K, name: $("an").value}).then(j => { D.agents.push(j.d); say("Link created"); draw(); }).catch(e => say(e.message, "e"));
+}
+api({action: "dash", k: K}).then(j => { D = j.d; D.base = location.origin + location.pathname; draw(); }).catch(e => { $("v").innerHTML = '<p class="empty">Could not load: ' + esc(e.message) + "</p>"; });
+draw();
 
-/* ---------- AGENT ---------- */
-let me = localStorage.getItem("dv_me") || "", visits = {}, agentInit = false;
-const setMsg = (t, bad) => { $("amsg").className = bad ? "err" : "mute"; $("amsg").textContent = t; };
-function startAgent(){
-  if(!agentInit){
-    agentInit = true;
-    $("adate").textContent = new Date().toLocaleDateString([], {weekday:"long",day:"numeric",month:"long",year:"numeric"});
-    $("me").innerHTML = '<option value="">Choose your name</option>' + CONFIG.AGENTS.map(a=>'<option>'+esc(a)+'</option>').join("");
-    $("me").value = me;
-    $("me").onchange = e => { me = e.target.value; localStorage.setItem("dv_me", me); $("box").dataset.k=""; aRender(); };
+}
+function runAgent() {
+
+const CODE = P.get("a") || "";
+const $ = id => document.getElementById(id);
+const t = new Date(); t.setMinutes(t.getMinutes() - t.getTimezoneOffset());
+$("date").value = t.toISOString().slice(0, 10);
+let asked = false;
+const getLoc = () => new Promise(res => {
+  if (!navigator.geolocation) return res(null);
+  navigator.geolocation.getCurrentPosition(p => res({lat: p.coords.latitude, lng: p.coords.longitude}), () => res(null), {enableHighAccuracy: true, timeout: 10000, maximumAge: 60000});
+});
+$("go").onclick = async () => {
+  const m = $("msg");
+  if (!$("dealer").value.trim()) { m.className = "err"; m.textContent = "Enter the dealer name"; return; }
+  $("go").disabled = true; m.className = ""; m.textContent = "Getting your location…";
+  const loc = await getLoc();
+  if (!loc && !$("locbox").value.trim() && !asked) {
+    asked = true; $("locwrap").hidden = false; $("go").disabled = false; m.className = "err";
+    m.textContent = "Location is blocked. Paste a Google Maps link below, or tap Save again to save without it."; return;
   }
-  aLoad(); timer = setInterval(aLoad, 20000);
-}
-async function aLoad(){
-  if(notSet()){ setMsg("Setup needed: add the Firebase URL in the CONFIG at the top of this file.", true); aRender(); return; }
-  try { visits = (await api("/visits/"+dayKey(Date.now()))) || {}; setMsg(""); } catch(e){ setMsg("Can’t reach the server. Check internet.", true); }
-  aRender();
-}
-function mine(){ return Object.entries(visits).map(([id,v])=>Object.assign({id},v)).filter(v=>v.agent===me).sort((a,b)=>b.inAt-a.inAt); }
-function aRender(){
-  const box = $("box"), list = mine(), open = list.find(v=>!v.outAt);
-  const key = !me ? "none" : open ? "out:"+open.id : "in";
-  if(box.dataset.k !== key){
-    box.dataset.k = key;
-    if(!me) box.innerHTML = '<p class="mute">Choose your name to start.</p>';
-    else if(!open) box.innerHTML = '<label for="dealer">Dealer name</label><input id="dealer" autocomplete="off"><button id="go">Check in</button><div class="mute" style="margin-top:8px">Time and GPS location are saved automatically.</div>';
-    else box.innerHTML = '<div class="row"><strong>'+esc(open.dealer)+'</strong><span class="mute">In since '+hm(open.inAt)+'</span></div>'+
-      '<label for="purpose">Purpose of visit</label><select id="purpose"><option>New dealer onboarding</option><option>Follow-up meeting</option><option>Stock or inventory check</option><option>Payment or documents</option><option>Other</option></select>'+
-      '<label for="outcome">Outcome and notes</label><textarea id="outcome"></textarea><label for="fu">Follow-up date (optional)</label><input id="fu" type="date"><button id="go">Check out</button>';
-    if($("go")) $("go").onclick = open ? () => checkOut(open) : checkIn;
-  }
-  $("alist").innerHTML = list.length ? list.map(v=>'<div class="item"><strong>'+esc(v.dealer)+'</strong><div class="mute">'+hm(v.inAt)+(v.outAt?' to '+hm(v.outAt):' · still there')+(v.purpose?' · '+esc(v.purpose):'')+'</div>'+(v.outcome?'<div>'+esc(v.outcome)+'</div>':'')+'</div>').join("") : '<div class="mute">No visits yet today.</div>';
-}
-async function checkIn(){
-  const dealer = $("dealer").value.trim(); if(!dealer) return setMsg("Enter the dealer name first.", true);
-  $("go").disabled = true; setMsg("Getting your location…");
-  const pos = await getPos(), now = Date.now();
-  try { await api("/visits/"+dayKey(now), "POST", {agent:me, dealer, inAt:now, outAt:null, lat:pos?pos.lat:null, lng:pos?pos.lng:null, acc:pos?pos.acc:null}); setMsg(pos?"Checked in.":"Checked in, but GPS was not available."); }
-  catch(e){ setMsg("Could not save. Try again.", true); $("go").disabled=false; return; }
-  aLoad();
-}
-async function checkOut(v){
-  $("go").disabled = true; setMsg("Getting your location…");
-  const pos = await getPos(), now = Date.now(), fu = $("fu").value || null;
-  const patch = {outAt:now, outLat:pos?pos.lat:null, outLng:pos?pos.lng:null, purpose:$("purpose").value, outcome:$("outcome").value.trim(), followUp:fu};
-  try {
-    await api("/visits/"+dayKey(v.inAt)+"/"+v.id, "PATCH", patch);
-    if(fu) await api("/followups", "POST", {agent:me, dealer:v.dealer, date:fu, note:patch.outcome});
-    setMsg("Checked out.");
-  } catch(e){ setMsg("Could not save. Try again.", true); $("go").disabled=false; return; }
-  aLoad();
-}
+  m.textContent = "Saving…";
+  const d = {date: $("date").value, product: $("product").value, dealer: $("dealer").value.trim(), contact: $("contact").value.trim(), stage: $("stage").value,
+    amount: $("amount").value, lost: $("lost").value.trim(), rating: $("rating").value, follow: $("follow").value, feedback: $("feedback").value.trim(), notes: $("notes").value.trim(),
+    lat: loc ? loc.lat : "", lng: loc ? loc.lng : "", loc: $("locbox").value.trim()};
+  const had = !!loc || !!d.loc;
+  api({action: "submit", code: CODE, d}).then(() => {
+    $("go").disabled = false; m.className = "ok"; m.textContent = had ? "Saved with location. You can log the next visit." : "Saved without location.";
+    ["dealer","contact","amount","lost","follow","feedback","notes","locbox"].forEach(i => $(i).value = ""); $("rating").value = ""; $("locwrap").hidden = true; asked = false;
+  }).catch(err => {
+    $("go").disabled = false; m.className = "err"; m.textContent = "Not saved: " + err.message;
+  });
+};
 
-/* ---------- MANAGER ---------- */
-let mgrInit = false;
-function startManager(){
-  if(sessionStorage.getItem("dv_ok")) showApp(); else { $("gate").hidden = false; $("app").hidden = true; }
-  if(!mgrInit){
-    mgrInit = true;
-    $("open").onclick = () => { if($("pin").value === CONFIG.MANAGER_PIN){ sessionStorage.setItem("dv_ok","1"); showApp(); } else $("gerr").textContent = "Wrong PIN."; };
-    $("pin").onkeydown = e => { if(e.key==="Enter") $("open").click(); };
-    $("day").onchange = mLoad;
-    $("cp").onclick = async () => { try { await navigator.clipboard.writeText($("alink").value); $("mmsg").textContent="Link copied."; } catch(e){ $("alink").select(); } };
-    $("wa").onclick = () => window.open("https://wa.me/?text="+encodeURIComponent("Please use this link to check in and out at dealers: "+$("alink").value), "_blank");
-  }
+$("mg").onclick = () => { const k = $("mk").value.trim(); if (k) location.href = location.pathname + "?view=dash&k=" + encodeURIComponent(k); };
+if (!CODE) { $("bad").hidden = false; $("mgr").hidden = false; } else {
+  api({action: "agent", code: CODE}).then(j => {
+    if (!j.agent) { $("bad").hidden = false; return; }
+    $("who").textContent = j.agent;
+    if (j.note) { $("nt").textContent = j.note; $("note").hidden = false; }
+    $("good").hidden = false;
+  }).catch(() => { $("bad").textContent = "Could not reach the server. Check your internet and reload."; $("bad").hidden = false; });
 }
-function showApp(){
-  $("gate").hidden = true; $("app").hidden = false;
-  $("alink").value = location.href.split("#")[0];
-  if(!$("day").value) $("day").value = dayKey(Date.now());
-  mLoad(); timer = setInterval(mLoad, 15000);
 }
-async function mLoad(){
-  if(notSet()){ $("mmsg").innerHTML = '<span class="err">Setup needed: add the Firebase URL in the CONFIG at the top of this file.</span>'; return; }
-  const day = $("day").value || dayKey(Date.now());
-  try {
-    const [vs, fs] = await Promise.all([api("/visits/"+day), api("/followups")]);
-    const list = Object.entries(vs||{}).map(([id,v])=>Object.assign({id},v)).sort((a,b)=>b.inAt-a.inAt);
-    $("mmsg").textContent = "Updated "+hm(Date.now());
-    $("team").innerHTML = CONFIG.AGENTS.map(a=>{
-      const m = list.filter(v=>v.agent===a), open = m.find(v=>!v.outAt);
-      const st = open ? '<span class="pill live">At '+esc(open.dealer)+' since '+hm(open.inAt)+'</span>' : m.length ? '<span class="pill">Last out '+hm(Math.max.apply(null,m.map(v=>v.outAt||0)))+'</span>' : '<span class="pill">No visits</span>';
-      return '<div class="item row"><div><strong>'+esc(a)+'</strong><div class="mute">'+m.length+' visit'+(m.length===1?"":"s")+'</div></div>'+st+'</div>'; }).join("");
-    $("log").innerHTML = list.length ? list.map(v=>'<div class="item"><div class="row"><strong>'+esc(v.dealer)+'</strong><span class="mute">'+esc(v.agent)+'</span></div><div class="mute">'+hm(v.inAt)+(v.outAt?' to '+hm(v.outAt)+' ('+dur(v.outAt-v.inAt)+')':' · still there')+' · '+(v.lat!=null?'<a target="_blank" rel="noopener" href="https://www.google.com/maps?q='+v.lat+','+v.lng+'">Map</a> (±'+v.acc+' m)':'No GPS')+'</div>'+(v.purpose?'<div>'+esc(v.purpose)+(v.outcome?': '+esc(v.outcome):'')+'</div>':'')+'</div>').join("") : '<div class="mute">No visits on this day.</div>';
-    const today = dayKey(Date.now()), f = Object.values(fs||{}).filter(x=>x.date>=dayKey(Date.now()-14*864e5)).sort((a,b)=>a.date<b.date?-1:1);
-    $("follow").innerHTML = f.length ? f.map(x=>'<div class="item row"><div><strong>'+esc(x.dealer)+'</strong><div class="mute">'+esc(x.agent)+(x.note?' · '+esc(x.note):'')+'</div></div><span class="pill '+(x.date<today?'warn':'')+'">'+(x.date<today?'Overdue ':'')+esc(x.date)+'</span></div>').join("") : '<div class="mute">No follow-ups.</div>';
-  } catch(e){ $("mmsg").innerHTML = '<span class="err">Can’t load data. Check the Firebase URL and rules.</span>'; }
+if (P.get("view") === "dash") {
+  document.getElementById("css-dash").media = "all";
+  document.getElementById("dashApp").hidden = false;
+  document.title = "Dealer dashboard";
+  runDash();
+} else {
+  document.getElementById("css-agent").media = "all";
+  document.getElementById("agentApp").hidden = false;
+  runAgent();
 }
-
-route();
-</script></main></body></html>
+</script>
+</body></html>
